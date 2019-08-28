@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Blocknaut</title>
+	<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+
+<body>
+
+	<canvas id="kansas" width="1800" height="900"></canvas>
+
+	<script>
+		let canvas;
+		let context;
+		let bounce = new Audio('./bounce2.wav');
+		let paddleBounce = new Audio('./paddleBounce.wav');
+		let death = new Audio('./death.wav');
+		let shatter = new Audio('./shatter.wav');
+		let ballXPos = 900;
+		let ballYPos = 450;
+		let paddleXPos = 800;
+		let paddleYPos = 870;
+		let ballXSpeed = - 10;
+		let ballYSpeed = - 10;
+		let ballInField = true;
+		let mouseX;
+		let mouseY;
+		const paddleLength = 200;
+		const paddleWidth = 15;
+		const ballRadius = 15;
+		const framesPerSecond = 60;
+		const brickLength = 100;
+		const brickWidth = 50;
+		const rowNum = 6;
+		const columnNum = 18;
+		const brickNum = rowNum * columnNum;
+		let bricks = new Array(brickNum);
+		let colors = ['red','orange','blue','yellow','green','purple'];
+
+
+
+		function drawBackground() {
+			context.fillStyle = 'black';
+			context.fillRect(0, 0, canvas.width, canvas.height);
+		}
+
+		function drawBricks() {
+			for (let i = 0; i < rowNum; i++) {
+				for (let m = 0; m < columnNum; m++) {
+					if (bricks[i * columnNum + m]) {
+						context.fillStyle = colors[i];
+						context.fillRect(m * brickLength, i * brickWidth, brickLength - 2, brickWidth - 2);
+					}
+				}
+			}
+		}
+
+
+
+		function drawCoordinate() {
+			context.fillStyle = 'white';
+			let brickCol = Math.floor(mouseX / brickLength);
+			let brickRow = Math.floor(mouseY / brickWidth);
+			context.fillText(brickCol + "," + brickRow, mouseX, mouseY);
+		}
+
+		function drawBall() {
+			context.fillStyle = 'white';
+			context.beginPath();
+			context.arc(ballXPos, ballYPos, ballRadius, 0, Math.PI * 2, false);
+			context.fill();
+		}
+
+		function resetBall() {
+			ballYPos = canvas.height / 2;
+			ballXPos = canvas.width / 2;
+			ballYSpeed = 10;
+			const dir = Math.floor(Math.random() * 3);
+			switch (dir) {
+				case 0:
+					ballXSpeed = 10;
+					break;
+				case 1:
+					ballXSpeed = -10;
+					break;
+				default:
+					ballXSpeed = 0;
+			}
+		}
+
+		function drawPaddle() {
+			context.fillStyle = 'white';
+			context.fillRect(paddleXPos, paddleYPos, paddleLength, paddleWidth);
+		}
+
+		function updateMousePos(event) {
+			let rect = canvas.getBoundingClientRect();
+			let root = document.documentElement;
+
+			mouseX = event.clientX - rect.left - root.scrollLeft;
+			mouseY = event.clientY - rect.top - root.scrollTop;
+
+			paddleXPos = mouseX - paddleLength / 2;
+		}
+
+		window.onload = function () {
+			canvas = document.getElementById("kansas");
+			context = canvas.getContext("2d");
+			canvas.addEventListener('mousemove', updateMousePos);
+			for (let j = 0; j < brickNum; j++) {
+				bricks[j] = true;
+			}
+
+			setInterval(() => {
+				moveEverything();
+				drawEverything();
+			}, 1000 / framesPerSecond)
+		}
+
+
+		function drawEverything() {
+			drawBackground();
+			drawBricks();
+			drawPaddle();
+			drawBall();
+			drawCoordinate();
+		}
+
+		function moveEverything() {
+			if (!ballInField) {
+				resetBall();
+				setTimeout(() => {
+					ballInField = true;
+				}, 3000);
+			}
+			else {
+				ballXPos += ballXSpeed;
+				ballYPos += ballYSpeed;
+
+				if (ballXPos <= ballRadius || ballXPos >= canvas.width - ballRadius) {
+					ballXSpeed *= -1;
+					bounce.play();
+				}
+				if (ballYPos <= ballRadius) {
+					ballYSpeed *= -1;
+					bounce.play();
+				}
+				if (ballYPos > canvas.height) {
+					//death.play();
+					ballInField = false;
+				}
+				if (ballYPos >= paddleYPos - ballRadius && ballXPos <= paddleXPos + paddleLength && ballXPos >= paddleXPos) {
+					ballYSpeed *= -1;
+					let delta = ballXPos - (paddleXPos + paddleLength / 2);
+					ballXSpeed = delta * 0.1;
+					paddleBounce.play();
+				}
+
+				let ballBrickCol = Math.floor(ballXPos / brickLength);
+				let ballBrickRow = Math.floor(ballYPos / brickWidth);
+				let brickIndexUnderBall = ballBrickRow * 18 + ballBrickCol;
+
+				if (brickIndexUnderBall >= 0 &&
+					brickIndexUnderBall < brickNum) {
+					if (bricks[brickIndexUnderBall]) {
+						bricks[brickIndexUnderBall] = false;
+						shatter.play();
+						let prevBallX = ballXPos - ballXSpeed;
+						let prevBallY = ballYPos - ballYSpeed;
+						let prevBrickCol = Math.floor(prevBallX / brickLength);
+						let prevBrickRow = Math.floor(prevBallY / brickWidth);
+
+						if (prevBrickCol != ballBrickCol) {
+							ballXSpeed *= -1;
+						}
+						if (prevBrickRow != ballBrickRow) {
+							ballYSpeed *= -1;
+						}
+					}
+				}
+			}
+		}
+
+	</script>
+</body>
+
+</html>
